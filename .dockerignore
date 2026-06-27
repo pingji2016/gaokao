@@ -1,0 +1,10 @@
+*.xlsx
+*.json
+process_data.py
+create_db.py
+start.bat
+__pycache__
+*.pyc
+.env
+.git
+README.md

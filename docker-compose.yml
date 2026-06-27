@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  gaokao:
+    build: .
+    container_name: gaokao-query
+    ports:
+      - "8080:5000"
+    restart: unless-stopped
+    # For data persistence if you update the db later
+    volumes:
+      - ./gaokao.db:/app/gaokao.db:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/filter-options')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

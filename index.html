@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>安徽高考数据查询系统</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #333; }
+
+/* Header */
+.header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: #fff; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.header h1 { font-size: 20px; font-weight: 700; }
+.header p { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+
+/* Tabs */
+.tabs { display: flex; background: #fff; border-bottom: 1px solid #e0e0e0; padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { padding: 12px 14px; cursor: pointer; font-size: 13px; color: #666; border-bottom: 3px solid transparent; transition: all .2s; user-select: none; white-space: nowrap; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+.tab:active { background: #f0f5ff; }
+.tab.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+
+/* Main */
+.main { max-width: 1400px; margin: 0 auto; padding: 12px 12px; }
+
+/* Panels */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* Cards */
+.card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 16px; margin-bottom: 12px; }
+.card h3 { font-size: 16px; margin-bottom: 12px; color: #1a73e8; display: flex; align-items: center; gap: 6px; }
+
+/* Form */
+.form-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 8px; }
+.form-group { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.form-group label { font-size: 12px; color: #666; margin-bottom: 3px; font-weight: 500; }
+.form-group input, .form-group select { padding: 10px 10px; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 15px; outline: none; transition: border .2s; width: 100%; -webkit-appearance: none; background: #fff; }
+.form-group input:focus, .form-group select:focus { border-color: #1a73e8; }
+
+.btn { padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 600; transition: all .2s; white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: #1a73e8; color: #fff; }
+.btn-primary:active { background: #1557b0; }
+.btn-outline { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; }
+.btn-outline:active { background: #f0f5ff; }
+.btn-sm { padding: 6px 12px; font-size: 13px; min-height: 36px; }
+.btn-xs { padding: 5px 10px; font-size: 12px; min-height: 32px; }
+.btn-block { width: 100%; }
+
+/* Stats row */
+.stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.stat { background: #f8f9ff; border-radius: 8px; padding: 10px 14px; text-align: center; flex: 1 1 auto; min-width: 70px; }
+.stat .num { font-size: 18px; font-weight: 700; color: #1a73e8; }
+.stat .lbl { font-size: 11px; color: #888; margin-top: 2px; }
+
+/* Table */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
+thead th { background: #f5f6f8; padding: 10px 8px; text-align: left; font-weight: 600; white-space: nowrap; border-bottom: 2px solid #e0e0e0; cursor: pointer; user-select: none; position: sticky; top: 0; }
+thead th:active { background: #e8edf5; }
+thead th .sort-icon { font-size: 10px; margin-left: 4px; opacity: 0.4; }
+tbody td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }
+tbody tr { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s; }
+tbody tr:active { background: #d8e8fd; }
+tbody tr.clickable { cursor: pointer; }
+.rank-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.rank-badge.good { background: #e8f5e9; color: #2e7d32; }
+.rank-badge.medium { background: #fff3e0; color: #e65100; }
+.rank-badge.hard { background: #fce4ec; color: #c62828; }
+.tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; background: #e3f2fd; color: #1565c0; margin: 1px 2px; white-space: nowrap; }
+.row-arrow { color: #ccc; font-size: 16px; margin-left: 4px; }
+
+/* Card list (mobile fallback) */
+.card-list { display: none; }
+.card-item { background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all .15s; position: relative; }
+.card-item:active { background: #d8e8fd; transform: scale(0.98); }
+.card-item .ci-school { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 4px; }
+.card-item .ci-major { font-size: 13px; color: #555; margin-bottom: 6px; }
+.card-item .ci-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: #888; }
+.card-item .ci-rank { font-size: 14px; font-weight: 700; color: #1a73e8; }
+.card-item .ci-arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 22px; color: #ccc; }
+
+/* Pagination */
+.pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
+.pagination button { padding: 10px 14px; border: 1px solid #d0d0d0; background: #fff; border-radius: 6px; cursor: pointer; font-size: 14px; min-height: 40px; -webkit-tap-highlight-color: transparent; }
+.pagination button:active { background: #f0f5ff; border-color: #1a73e8; }
+.pagination button.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.pagination button:disabled { opacity: 0.3; }
+.pagination .page-info { font-size: 13px; color: #888; padding: 0 4px; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: #fff; border-radius: 12px; width: 92%; max-width: 1100px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); -webkit-overflow-scrolling: touch; }
+.modal-header { padding: 16px 18px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #fff; z-index: 2; border-radius: 12px 12px 0 0; }
+.modal-header h2 { font-size: 17px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal-close { background: #f0f0f0; border: none; font-size: 20px; cursor: pointer; color: #666; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-left: 10px; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+.modal-close:active { background: #ddd; }
+.modal-body { padding: 14px; }
+
+/* School info grid */
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.info-item { }
+.info-item .label { font-size: 11px; color: #888; }
+.info-item .value { font-size: 13px; font-weight: 500; margin-top: 1px; }
+.info-section { margin-top: 16px; }
+.info-section h4 { font-size: 15px; margin-bottom: 8px; color: #333; border-left: 3px solid #1a73e8; padding-left: 10px; }
+
+/* Chart */
+.chart-wrap { width: 100%; min-height: 200px; max-height: 300px; margin: 8px 0; }
+
+/* Loading */
+.loading { text-align: center; padding: 30px; color: #888; }
+.spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top-color: #1a73e8; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 20px; background: #333; color: #fff; border-radius: 8px; z-index: 9999; font-size: 14px; animation: fadeIn .3s; max-width: 90vw; text-align: center; }
+@keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+/* Empty state */
+.empty { text-align: center; padding: 40px; color: #999; }
+.empty .icon { font-size: 48px; margin-bottom: 10px; }
+
+/* Filter toggle for mobile */
+.filter-toggle { display: none; width: 100%; padding: 10px; background: #f5f6f8; border: 1px dashed #d0d0d0; border-radius: 8px; font-size: 13px; color: #666; cursor: pointer; text-align: center; margin-bottom: 10px; -webkit-tap-highlight-color: transparent; }
+.filter-toggle:active { background: #e8edf5; }
+
+/* Section divider */
+.section-label { font-size: 12px; color: #999; margin: 10px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 768px) {
+  .header { padding: 12px 14px; }
+  .header h1 { font-size: 18px; }
+  .header p { font-size: 11px; }
+  .tabs { padding: 0; }
+  .tab { padding: 10px 12px; font-size: 12px; }
+  .main { padding: 8px 8px; }
+  .card { padding: 12px; border-radius: 8px; margin-bottom: 8px; }
+  .card h3 { font-size: 15px; }
+
+  /* Form full width */
+  .form-row { gap: 6px; }
+  .form-group { flex: 1 1 calc(50% - 6px); min-width: 100px; }
+  .form-group.full-width { flex: 1 1 100%; }
+  .form-group input, .form-group select { padding: 10px 8px; font-size: 16px; } /* 16px prevents iOS zoom */
+
+  /* Buttons bigger */
+  .btn { padding: 12px 18px; font-size: 15px; min-height: 44px; }
+  .btn-sm { padding: 8px 14px; font-size: 13px; min-height: 36px; }
+
+  /* Show card list, optionally hide table */
+  .card-list { display: block; }
+  .table-wrap.desktop-table { display: none; }
+  .stats { gap: 6px; }
+  .stat { padding: 8px 10px; min-width: 60px; }
+  .stat .num { font-size: 16px; }
+  .stat .lbl { font-size: 10px; }
+
+  /* Modal full screen */
+  .modal { width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+  .modal-header { border-radius: 0; padding: 14px 16px; }
+  .modal-header h2 { font-size: 16px; }
+  .modal-body { padding: 12px; }
+  .modal-close { width: 32px; height: 32px; font-size: 18px; }
+
+  /* Info grid 2 cols */
+  .info-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+
+  /* Pagination bigger */
+  .pagination button { padding: 10px 16px; font-size: 15px; min-height: 44px; }
+
+  /* Filter toggle */
+  .filter-toggle { display: block; }
+  .filter-collapsible.collapsed { display: none; }
+}
+
+@media (min-width: 769px) {
+  .card-list { display: none; }
+}
+
+/* Badge styles */
+.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.badge-985 { background: #ffebee; color: #b71c1c; }
+.badge-211 { background: #fff3e0; color: #e65100; }
+.badge-double-first { background: #e8f5e9; color: #1b5e20; }
+
+/* Back to top button */
+.back-top { display: none; position: fixed; bottom: 20px; right: 20px; width: 44px; height: 44px; background: #1a73e8; color: #fff; border: none; border-radius: 50%; font-size: 20px; cursor: pointer; z-index: 999; box-shadow: 0 4px 12px rgba(26,115,232,0.4); -webkit-tap-highlight-color: transparent; }
+.back-top:active { background: #1557b0; transform: scale(0.95); }
+.back-top.show { display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📚 安徽高考数据查询系统</h1>
+  <p>2023-2025 年安徽省录取数据 · 2,192所院校 · 12,857个专业 · 43,190条记录</p>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="rank-match">🎯 名次匹配</div>
+  <div class="tab" data-tab="major-query">📖 专业查询</div>
+  <div class="tab" data-tab="school-query">🏫 院校查询</div>
+  <div class="tab" data-tab="advanced-search">🔍 高级筛选</div>
+</div>
+
+<div class="main">
+
+  <!-- ============ RANK MATCH PANEL ============ -->
+  <div class="panel active" id="panel-rank-match">
+    <div class="card">
+      <h3>🎯 名次匹配推荐</h3>
+      <p style="color:#888;font-size:12px;margin-bottom:10px;">输入全省排名，匹配±N名次范围内的院校及专业</p>
+      <div class="form-row">
+        <div class="form-group"><label>你的排名 *</label><input type="number" id="rm-rank" placeholder="例：50000" min="1" inputmode="numeric"></div>
+        <div class="form-group"><label>±范围</label><input type="number" id="rm-gap" value="1000" min="100" max="50000" step="100" inputmode="numeric"></div>
+        <div class="form-group"><label>批次</label><select id="rm-batch"><option value="">全部</option></select></div>
+        <div class="form-group"><label>科类</label><select id="rm-subject"><option value="">全部</option></select></div>
+        <div class="form-group"><label>专业关键词</label><input type="text" id="rm-major" placeholder="例：计算机"></div>
+        <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="doRankMatch()">🔍 匹配</button></div>
+      </div>
+    </div>
+    <div id="rm-results"></div>
+  </div>
+
+  <!-- ============ MAJOR QUERY PANEL ============ -->
+  <div class="panel" id="panel-major-query">
+    <div class="card">
+      <h3>📖 专业录取历史查询</h3>
+      <p style="color:#888;font-size:12px;margin-bottom:10px;">查看所有开设该专业的院校录取数据（按2025平均位次排序）</p>
+      <div class="form-row">
+        <div class="form-group"><label>专业名称 *</label><input type="text" id="mq-major" placeholder="例：计算机科学与技术" list="major-suggestions"></div>
+        <datalist id="major-suggestions"></datalist>
+        <div class="form-group"><label>批次</label><select id="mq-batch"><option value="">全部</option></select></div>
+        <div class="form-group"><label>科类</label><select id="mq-subject"><option value="">全部</option></select></div>
+        <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="doMajorQuery()">🔍 查询</button></div>
+      </div>
+    </div>
+    <div id="mq-results"></div>
+  </div>
+
+  <!-- ============ SCHOOL QUERY PANEL ============ -->
+  <div class="panel" id="panel-school-query">
+    <div class="card">
+      <h3>🏫 院校查询</h3>
+      <p style="color:#888;font-size:12px;margin-bottom:10px;">输入院校名称查看该校所有专业历年录取数据</p>
+      <div class="form-row">
+        <div class="form-group"><label>院校名称 *</label><input type="text" id="sq-school" placeholder="例：中国科学技术大学" list="school-suggestions"></div>
+        <datalist id="school-suggestions"></datalist>
+        <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="doSchoolQuery()">🔍 查询</button></div>
+      </div>
+    </div>
+    <div id="sq-results"></div>
+  </div>
+
+  <!-- ============ ADVANCED SEARCH PANEL ============ -->
+  <div class="panel" id="panel-advanced-search">
+    <div class="card">
+      <h3>🔍 高级筛选</h3>
+      <button class="filter-toggle" onclick="toggleFilters()">⚙️ 展开/收起筛选条件</button>
+      <div class="filter-collapsible" id="filter-panel">
+        <div class="form-row">
+          <div class="form-group"><label>院校名称</label><input type="text" id="as-school" placeholder="输入院校名称"></div>
+          <div class="form-group"><label>专业名称</label><input type="text" id="as-major" placeholder="输入专业名称"></div>
+          <div class="form-group"><label>批次</label><select id="as-batch"><option value="">全部</option></select></div>
+          <div class="form-group"><label>科类</label><select id="as-subject"><option value="">全部</option></select></div>
+          <div class="form-group"><label>省份</label><select id="as-province"><option value="">全部</option></select></div>
+          <div class="form-group"><label>城市</label><select id="as-city"><option value="">全部</option></select></div>
+          <div class="form-group"><label>院校类型</label><select id="as-type"><option value="">全部</option></select></div>
+          <div class="form-group"><label>办学性质</label><select id="as-nature"><option value="">全部</option></select></div>
+          <div class="form-group"><label>院校标签</label><select id="as-tag"><option value="">全部</option></select></div>
+          <div class="form-group"><label>最低分≥</label><input type="number" id="as-min-score" placeholder="最低分" inputmode="numeric"></div>
+          <div class="form-group"><label>最高分≤</label><input type="number" id="as-max-score" placeholder="最高分" inputmode="numeric"></div>
+          <div class="form-group"><label>学费≤</label><input type="number" id="as-max-tuition" placeholder="元/年" inputmode="numeric"></div>
+          <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="doAdvancedSearch()">🔍 搜索</button></div>
+        </div>
+      </div>
+    </div>
+    <div id="as-results"></div>
+  </div>
+
+</div>
+
+<!-- School Detail Modal -->
+<div class="modal-overlay" id="school-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">院校详情</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">⬆</button>
+<div id="toast-container"></div>
+
+<script>
+// ==================== GLOBAL STATE ====================
+let filterOptions = {};
+let currentPage = 1;
+let currentSort = { field: 'avg_rank_2025', order: 'asc' };
+let isMobile = window.innerWidth <= 768;
+
+// ==================== INIT ====================
+async function init() {
+  try {
+    const res = await fetch('/api/filter-options');
+    filterOptions = await res.json();
+    populateAllDropdowns();
+  } catch (e) {
+    showToast('❌ 无法连接服务器');
+    console.error(e);
+  }
+}
+
+function populateAllDropdowns() {
+  ['rm-batch', 'mq-batch', 'as-batch'].forEach(id => populateSelect(id, filterOptions.batch || []));
+  ['rm-subject', 'mq-subject', 'as-subject'].forEach(id => populateSelect(id, filterOptions.subject_category || []));
+  populateSelect('as-province', filterOptions.school_province || []);
+  populateSelect('as-city', filterOptions.school_city || []);
+  populateSelect('as-type', filterOptions.school_type || []);
+  populateSelect('as-nature', filterOptions.school_nature || []);
+  populateSelect('as-tag', filterOptions.school_tag || []);
+}
+
+function populateSelect(id, options) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  const currentVal = sel.value;
+  sel.innerHTML = sel.options[0] ? sel.options[0].outerHTML : '<option value="">全部</option>';
+  options.forEach(opt => { const o = document.createElement('option'); o.value = opt; o.textContent = opt; sel.appendChild(o); });
+  if (currentVal) sel.value = currentVal;
+}
+
+// ==================== TABS ====================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ==================== FILTER TOGGLE (mobile) ====================
+function toggleFilters() {
+  document.getElementById('filter-panel').classList.toggle('collapsed');
+}
+
+// ==================== AUTOCOMPLETE ====================
+let acTimeout;
+document.getElementById('sq-school').addEventListener('input', function() {
+  clearTimeout(acTimeout);
+  const q = this.value.trim();
+  if (q.length < 1) return;
+  acTimeout = setTimeout(async () => {
+    const res = await fetch('/api/autocomplete/schools?q=' + encodeURIComponent(q));
+    const schools = await res.json();
+    document.getElementById('school-suggestions').innerHTML = schools.map(s => `<option value="${s}">`).join('');
+  }, 300);
+});
+document.getElementById('mq-major').addEventListener('input', function() {
+  clearTimeout(acTimeout);
+  const q = this.value.trim();
+  if (q.length < 1) return;
+  acTimeout = setTimeout(async () => {
+    const res = await fetch('/api/autocomplete/majors?q=' + encodeURIComponent(q));
+    const majors = await res.json();
+    document.getElementById('major-suggestions').innerHTML = majors.map(m => `<option value="${m}">`).join('');
+  }, 300);
+});
+
+// ==================== TABLE/CARD RENDERING HELPERS ====================
+function renderResultSection(container, statsHtml, rowsHtml, cardItemsHtml, totalCount) {
+  let html = statsHtml;
+  if (totalCount === 0) return html;
+
+  if (isMobile) {
+    html += '<div class="card-list">' + cardItemsHtml + '</div>';
+  } else {
+    html += '<div class="table-wrap desktop-table">' + rowsHtml + '</div>';
+  }
+  return html;
+}
+
+function makeRowClickable(schoolName) {
+  return `onclick="showSchoolDetail('${escAttr(schoolName)}')" style="cursor:pointer"`;
+}
+
+// ==================== RANK MATCH ====================
+async function doRankMatch() {
+  const rank = document.getElementById('rm-rank').value.trim();
+  if (!rank) { showToast('⚠️ 请输入你的全省排名'); return; }
+  const gap = document.getElementById('rm-gap').value || 1000;
+  const batch = document.getElementById('rm-batch').value;
+  const subject = document.getElementById('rm-subject').value;
+  const major = document.getElementById('rm-major').value.trim();
+
+  const container = document.getElementById('rm-results');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><p>匹配中...</p></div>';
+
+  let url = `/api/rank-match?rank=${rank}&gap=${gap}`;
+  if (batch) url += '&batch=' + encodeURIComponent(batch);
+  if (subject) url += '&subject_category=' + encodeURIComponent(subject);
+  if (major) url += '&major_name=' + encodeURIComponent(major);
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) { container.innerHTML = `<div class="empty"><div class="icon">⚠️</div><p>${data.error}</p></div>`; return; }
+    renderRankMatchResults(container, data);
+  } catch (e) {
+    container.innerHTML = '<div class="empty"><div class="icon">❌</div><p>查询失败</p></div>';
+  }
+}
+
+function renderRankMatchResults(container, data) {
+  const statsHtml = `
+    <div class="stats">
+      <div class="stat"><div class="num">${data.your_rank.toLocaleString()}</div><div class="lbl">你的排名</div></div>
+      <div class="stat"><div class="num">${data.total_schools}</div><div class="lbl">匹配院校</div></div>
+      <div class="stat"><div class="num">${data.total_majors}</div><div class="lbl">匹配专业</div></div>
+      <div class="stat"><div class="num">${data.rank_range[0].toLocaleString()}~${data.rank_range[1].toLocaleString()}</div><div class="lbl">匹配范围</div></div>
+    </div>`;
+
+  if (data.total_majors === 0) {
+    container.innerHTML = statsHtml + '<div class="empty"><div class="icon">📭</div><p>未找到匹配结果，请扩大位次范围或调整筛选条件</p></div>';
+    return;
+  }
+
+  const items = data.all_results.slice(0, 200);
+
+  // Desktop table rows
+  let rowsHtml = '<table><thead><tr>';
+  rowsHtml += '<th>院校名称</th><th>专业名称</th><th>2025平均分</th><th>2025平均位次</th><th>2025最低分</th><th>批次</th><th>科类</th><th>院校标签</th><th>学费</th>';
+  rowsHtml += '</tr></thead><tbody>';
+  items.forEach(r => {
+    const rankDiff = r.avg_rank_2025 ? r.avg_rank_2025 - data.your_rank : null;
+    let rankClass = rankDiff !== null ? (rankDiff > 0 ? 'hard' : (rankDiff >= -500 ? 'good' : 'medium')) : '';
+    rowsHtml += `<tr ${makeRowClickable(r.school_name)}>
+      <td><strong>${escHtml(r.school_name)}</strong><br><span style="font-size:11px;color:#888;">${escHtml(r.school_city||'')}·${escHtml(r.school_province||'')}</span></td>
+      <td>${escHtml(r.major_full_name||'')}</td>
+      <td>${r.avg_score_2025||'-'}</td>
+      <td><span class="rank-badge ${rankClass}">${r.avg_rank_2025 ? r.avg_rank_2025.toLocaleString() : '-'}</span></td>
+      <td>${r.lowest_score_2025||'-'}</td>
+      <td>${escHtml(r.batch||'')}</td>
+      <td>${escHtml(r.subject_category||'')}</td>
+      <td>${(r.school_tag||'').split('/').map(t => `<span class="tag">${t}</span>`).join('')}</td>
+      <td>${r.tuition ? r.tuition.toLocaleString() : '-'}</td>
+    </tr>`;
+  });
+  if (data.total_majors > 200) rowsHtml += `<tr><td colspan="9" style="text-align:center;color:#888;padding:12px;">仅显示前200条</td></tr>`;
+  rowsHtml += '</tbody></table>';
+
+  // Mobile card items
+  let cardsHtml = '';
+  items.forEach(r => {
+    const rd = r.avg_rank_2025 ? r.avg_rank_2025 - data.your_rank : null;
+    const rc = rd !== null ? (rd > 0 ? 'hard' : (rd >= -500 ? 'good' : 'medium')) : '';
+    cardsHtml += `<div class="card-item" onclick="showSchoolDetail('${escAttr(r.school_name)}')">
+      <div class="ci-school">${escHtml(r.school_name)} <span style="font-size:11px;color:#888;font-weight:400;">${escHtml(r.school_city||'')}·${escHtml(r.school_province||'')}</span></div>
+      <div class="ci-major">${escHtml(r.major_full_name||'')} · ${escHtml(r.batch||'')}</div>
+      <div class="ci-meta">
+        <span class="ci-rank"><span class="rank-badge ${rc}">位次 ${r.avg_rank_2025 ? r.avg_rank_2025.toLocaleString() : '-'}</span></span>
+        <span>均分 ${r.avg_score_2025||'-'}</span>
+        <span>${(r.school_tag||'').split('/').slice(0,2).map(t => `<span class="tag">${t}</span>`).join('')}</span>
+        <span style="margin-left:auto;">${r.tuition ? '¥'+r.tuition.toLocaleString() : ''}</span>
+      </div>
+      <div class="ci-arrow">›</div>
+    </div>`;
+  });
+  if (data.total_majors > 200) cardsHtml += '<div style="text-align:center;color:#888;padding:12px;font-size:12px;">仅显示前200条</div>';
+
+  container.innerHTML = renderResultSection(container, statsHtml, rowsHtml, cardsHtml, data.total_majors);
+}
+
+// ==================== MAJOR QUERY ====================
+async function doMajorQuery() {
+  const major = document.getElementById('mq-major').value.trim();
+  if (!major) { showToast('⚠️ 请输入专业名称'); return; }
+  const batch = document.getElementById('mq-batch').value;
+  const subject = document.getElementById('mq-subject').value;
+
+  const container = document.getElementById('mq-results');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><p>查询中...</p></div>';
+
+  let url = '/api/major-history?major_name=' + encodeURIComponent(major);
+  if (batch) url += '&batch=' + encodeURIComponent(batch);
+  if (subject) url += '&subject_category=' + encodeURIComponent(subject);
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) { container.innerHTML = `<div class="empty"><div class="icon">⚠️</div><p>${data.error}</p></div>`; return; }
+    renderMajorQueryResults(container, data);
+  } catch (e) {
+    container.innerHTML = '<div class="empty"><div class="icon">❌</div><p>查询失败</p></div>';
+  }
+}
+
+function renderMajorQueryResults(container, data) {
+  const statsHtml = `
+    <div class="stats">
+      <div class="stat"><div class="num">${data.total}</div><div class="lbl">开设院校</div></div>
+      ${data.stats.avg_rank_2025 ? `<div class="stat"><div class="num">${Math.round(data.stats.avg_rank_2025).toLocaleString()}</div><div class="lbl">2025均位次</div></div>` : ''}
+      ${data.stats.min_rank_2025 ? `<div class="stat"><div class="num">${data.stats.min_rank_2025.toLocaleString()}</div><div class="lbl">最高位次</div></div>` : ''}
+      ${data.stats.avg_score_2025 ? `<div class="stat"><div class="num">${Math.round(data.stats.avg_score_2025)}</div><div class="lbl">2025均分</div></div>` : ''}
+    </div>`;
+
+  if (data.total === 0) {
+    container.innerHTML = statsHtml + '<div class="empty"><div class="icon">📭</div><p>未找到相关专业数据</p></div>';
+    return;
+  }
+
+  const items = data.results.slice(0, 300);
+
+  let rowsHtml = '<table><thead><tr>';
+  rowsHtml += '<th>院校名称</th><th>省份</th><th>城市</th><th>批次</th><th>科类</th><th>2025均分</th><th>2025均位次</th><th>2024均位次</th><th>2023均位次</th><th>标签</th><th>学费</th>';
+  rowsHtml += '</tr></thead><tbody>';
+  items.forEach(r => {
+    rowsHtml += `<tr ${makeRowClickable(r.school_name)}>
+      <td><strong>${escHtml(r.school_name)}</strong></td>
+      <td>${escHtml(r.school_province||'')}</td><td>${escHtml(r.school_city||'')}</td><td>${escHtml(r.batch||'')}</td><td>${escHtml(r.subject_category||'')}</td>
+      <td>${r.avg_score_2025||'-'}</td>
+      <td><strong>${r.avg_rank_2025 ? r.avg_rank_2025.toLocaleString() : '-'}</strong></td>
+      <td>${r.avg_rank_2024 ? r.avg_rank_2024.toLocaleString() : '-'}</td>
+      <td>${r.avg_rank_2023 ? r.avg_rank_2023.toLocaleString() : '-'}</td>
+      <td>${(r.school_tag||'').split('/').slice(0,3).map(t => `<span class="tag">${t}</span>`).join('')}</td>
+      <td>${r.tuition ? r.tuition.toLocaleString() : '-'}</td>
+    </tr>`;
+  });
+  if (data.total > 300) rowsHtml += `<tr><td colspan="11" style="text-align:center;color:#888;padding:12px;">仅显示前300条</td></tr>`;
+  rowsHtml += '</tbody></table>';
+
+  let cardsHtml = '';
+  items.forEach(r => {
+    cardsHtml += `<div class="card-item" onclick="showSchoolDetail('${escAttr(r.school_name)}')">
+      <div class="ci-school">${escHtml(r.school_name)} <span style="font-size:11px;color:#888;font-weight:400;">${escHtml(r.school_city||'')}·${escHtml(r.school_province||'')}</span></div>
+      <div class="ci-major">${escHtml(r.major_full_name||'')} · ${escHtml(r.batch||'')}</div>
+      <div class="ci-meta">
+        <span class="ci-rank">位次 <strong>${r.avg_rank_2025 ? r.avg_rank_2025.toLocaleString() : '-'}</strong></span>
+        <span>均分 ${r.avg_score_2025||'-'}</span>
+        <span>2024: ${r.avg_rank_2024 ? r.avg_rank_2024.toLocaleString() : '-'}</span>
+        <span>2023: ${r.avg_rank_2023 ? r.avg_rank_2023.toLocaleString() : '-'}</span>
+      </div>
+      <div class="ci-arrow">›</div>
+    </div>`;
+  });
+  if (data.total > 300) cardsHtml += '<div style="text-align:center;color:#888;padding:12px;font-size:12px;">仅显示前300条</div>';
+
+  container.innerHTML = renderResultSection(container, statsHtml, rowsHtml, cardsHtml, data.total);
+}
+
+// ==================== SCHOOL QUERY ====================
+async function doSchoolQuery() {
+  const school = document.getElementById('sq-school').value.trim();
+  if (!school) { showToast('⚠️ 请输入院校名称'); return; }
+  showSchoolDetail(school);
+}
+
+async function showSchoolDetail(schoolName) {
+  const modal = document.getElementById('school-modal');
+  const body = document.getElementById('modal-body');
+  document.getElementById('modal-title').textContent = schoolName;
+  modal.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  body.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载院校数据...</p></div>';
+
+  try {
+    const res = await fetch('/api/school/' + encodeURIComponent(schoolName));
+    const data = await res.json();
+    if (data.error) { body.innerHTML = `<div class="empty"><div class="icon">⚠️</div><p>${data.error}</p></div>`; return; }
+    renderSchoolDetail(body, data);
+  } catch (e) {
+    body.innerHTML = '<div class="empty"><div class="icon">❌</div><p>加载失败</p></div>';
+  }
+}
+
+function renderSchoolDetail(container, data) {
+  const s = data.summary;
+  let html = '';
+
+  html += '<div class="info-section"><h4>📋 院校基本信息</h4><div class="info-grid">';
+  html += infoItem('院校名称', s.school_name);
+  html += infoItem('院校代码', s.school_code);
+  html += infoItem('所在省份', s.school_province);
+  html += infoItem('所在城市', s.school_city);
+  html += infoItem('院校类型', s.school_type);
+  html += infoItem('办学性质', s.school_nature);
+  html += infoItem('学历层次', s.school_degree_level);
+  html += infoItem('院校标签', s.school_tag);
+  html += infoItem('院校水平', s.school_level);
+  html += infoItem('办学水平标签', s.school_level_tag);
+  html += infoItem('办学单位', s.school_unit);
+  html += infoItem('行政区', s.school_district);
+  html += infoItem('硕士专业数', s.school_master_count);
+  html += infoItem('博士专业数', s.school_phd_count);
+  html += infoItem('校区合并/转设', s.school_merge_info);
+  html += '</div></div>';
+
+  if (s.school_description) {
+    html += `<div class="info-section"><h4>📝 院校介绍</h4><p style="line-height:1.8;color:#555;font-size:14px;">${escHtml(s.school_description)}</p></div>`;
+  }
+  if (s.school_transfer_policy) {
+    html += `<div class="info-section"><h4>🔄 转专业政策</h4><p style="line-height:1.8;color:#555;font-size:14px;">${escHtml(s.school_transfer_policy)}</p></div>`;
+  }
+  if (s.school_master_majors) {
+    html += `<div class="info-section"><h4>🎓 硕士专业</h4><p style="line-height:1.8;color:#555;font-size:13px;">${escHtml(s.school_master_majors)}</p></div>`;
+  }
+  if (s.school_phd_majors) {
+    html += `<div class="info-section"><h4>🎓 博士专业</h4><p style="line-height:1.8;color:#555;font-size:13px;">${escHtml(s.school_phd_majors)}</p></div>`;
+  }
+  if (s.school_admission_guide_2025) {
+    html += `<div class="info-section"><h4>🔗 2025招生章程</h4><a href="${escHtml(s.school_admission_guide_2025)}" target="_blank" rel="noopener" style="color:#1a73e8;word-break:break-all;">查看招生章程</a></div>`;
+  }
+
+  html += `<div class="info-section"><h4>📊 专业录取数据（共${data.major_count}个专业，按2025平均位次排序）</h4>`;
+
+  // Chart - find first major with data
+  if (data.majors.length > 0) {
+    const cm = data.majors.find(m => m.admission['2023'].avg_rank || m.admission['2024'].avg_rank || m.admission['2025'].avg_rank) || data.majors[0];
+    const avgRanks = [cm.admission['2023'].avg_rank, cm.admission['2024'].avg_rank, cm.admission['2025'].avg_rank];
+    const avgScores = [cm.admission['2023'].avg_score, cm.admission['2024'].avg_score, cm.admission['2025'].avg_score];
+    if (avgRanks.some(r => r) || avgScores.some(r => r)) {
+      html += `<p style="font-size:12px;color:#888;margin-bottom:4px;">📈 ${escHtml(cm.major_full_name||'')} 历年趋势</p>`;
+      html += '<div style="display:flex;gap:12px;flex-wrap:wrap;">';
+      if (avgRanks.some(r => r)) html += '<div class="chart-wrap" style="flex:1;min-width:250px;"><canvas id="chart-rank"></canvas></div>';
+      if (avgScores.some(r => r)) html += '<div class="chart-wrap" style="flex:1;min-width:250px;"><canvas id="chart-score"></canvas></div>';
+      html += '</div>';
+    }
+  }
+
+  // Desktop table
+  html += '<div class="table-wrap desktop-table"><table><thead><tr>';
+  html += '<th>专业名称</th><th>批次</th><th>科类</th><th>选科要求</th><th>学制</th><th>学费</th>';
+  html += '<th>2025均分</th><th>2025均位次</th><th>2025最低分</th><th>2025最低位次</th>';
+  html += '<th>2024均位次</th><th>2023均位次</th>';
+  html += '<th>专业水平</th><th>硕士点</th><th>趋势</th>';
+  html += '</tr></thead><tbody>';
+
+  data.majors.forEach(m => {
+    html += `<tr>
+      <td><strong>${escHtml(m.major_full_name||'')}</strong></td>
+      <td>${escHtml(m.batch||'')}</td><td>${escHtml(m.subject_category||'')}</td><td>${escHtml(m.subject_requirement||'')}</td>
+      <td>${m.study_years||'-'}年</td><td>${m.tuition ? m.tuition.toLocaleString() : '-'}</td>
+      <td>${m.admission['2025'].avg_score||'-'}</td>
+      <td><strong>${m.admission['2025'].avg_rank ? m.admission['2025'].avg_rank.toLocaleString() : '-'}</strong></td>
+      <td>${m.admission['2025'].lowest_score||'-'}</td>
+      <td>${m.admission['2025'].lowest_rank ? m.admission['2025'].lowest_rank.toLocaleString() : '-'}</td>
+      <td>${m.admission['2024'].avg_rank ? m.admission['2024'].avg_rank.toLocaleString() : '-'}</td>
+      <td>${m.admission['2023'].avg_rank ? m.admission['2023'].avg_rank.toLocaleString() : '-'}</td>
+      <td>${(m.major_level||'').split('/').filter(Boolean).map(t => `<span class="tag">${t}</span>`).join('')}</td>
+      <td>${m.major_master_point||'-'}</td>
+      <td><button class="btn btn-xs btn-outline" onclick="event.stopPropagation();showMajorHistoryChart(this,'${escAttr(m.major_full_name||'')}',${m.admission['2023'].avg_rank||0},${m.admission['2023'].avg_score||0},${m.admission['2024'].avg_rank||0},${m.admission['2024'].avg_score||0},${m.admission['2025'].avg_rank||0},${m.admission['2025'].avg_score||0})">📈</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  // Mobile card list
+  html += '<div class="card-list">';
+  data.majors.forEach(m => {
+    html += `<div class="card-item" onclick="showMajorHistoryChart(this,'${escAttr(m.major_full_name||'')}',${m.admission['2023'].avg_rank||0},${m.admission['2023'].avg_score||0},${m.admission['2024'].avg_rank||0},${m.admission['2024'].avg_score||0},${m.admission['2025'].avg_rank||0},${m.admission['2025'].avg_score||0})">
+      <div class="ci-school">${escHtml(m.major_full_name||'')}</div>
+      <div class="ci-major">${escHtml(m.batch||'')} · ${escHtml(m.subject_category||'')} · ${m.study_years||'-'}年 · ¥${m.tuition ? m.tuition.toLocaleString() : '-'}</div>
+      <div class="ci-meta">
+        <span>2025: <strong>位次${m.admission['2025'].avg_rank ? m.admission['2025'].avg_rank.toLocaleString() : '-'}</strong> / 均分${m.admission['2025'].avg_score||'-'}</span>
+        <span>2024: ${m.admission['2024'].avg_rank ? m.admission['2024'].avg_rank.toLocaleString() : '-'}</span>
+        <span>2023: ${m.admission['2023'].avg_rank ? m.admission['2023'].avg_rank.toLocaleString() : '-'}</span>
+        ${m.major_level ? '<span>' + m.major_level.split('/').filter(Boolean).map(t => `<span class="tag">${t}</span>`).join('') + '</span>' : ''}
+      </div>
+      <div class="ci-arrow" style="font-size:14px;">📈 趋势</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  html += '</div>'; // close info-section
+  container.innerHTML = html;
+
+  // Draw charts
+  setTimeout(() => {
+    if (data.majors.length > 0) {
+      const m = data.majors.find(x => x.admission['2023'].avg_rank || x.admission['2024'].avg_rank || x.admission['2025'].avg_rank) || data.majors[0];
+      const mn = m.major_full_name || '';
+      drawHistoryChart('chart-rank', mn + ' 位次趋势', '位次', [m.admission['2023'].avg_rank, m.admission['2024'].avg_rank, m.admission['2025'].avg_rank], true);
+      drawHistoryChart('chart-score', mn + ' 分数趋势', '分数', [m.admission['2023'].avg_score, m.admission['2024'].avg_score, m.admission['2025'].avg_score], false);
+    }
+  }, 150);
+}
+
+function infoItem(label, value) {
+  if (!value && value !== 0) return '';
+  return `<div class="info-item"><div class="label">${label}</div><div class="value">${escHtml(String(value))}</div></div>`;
+}
+
+function drawHistoryChart(canvasId, title, yLabel, data, reverse) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['2023', '2024', '2025'],
+      datasets: [{
+        label: title, data: data.map(d => d || null),
+        borderColor: '#1a73e8', backgroundColor: 'rgba(26,115,232,0.08)',
+        fill: true, tension: 0.3, pointRadius: 5, pointBackgroundColor: '#1a73e8',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { title: { display: true, text: yLabel }, reverse: reverse } }
+    }
+  });
+}
+
+// ==================== ADVANCED SEARCH ====================
+async function doAdvancedSearch(page = 1) {
+  const params = new URLSearchParams();
+  const add = (id, param) => { const v = document.getElementById(id).value.trim(); if (v) params.set(param, v); };
+  add('as-school', 'school_name'); add('as-major', 'major_name');
+  add('as-batch', 'batch'); add('as-subject', 'subject_category');
+  add('as-province', 'school_province'); add('as-city', 'school_city');
+  add('as-type', 'school_type'); add('as-nature', 'school_nature');
+  add('as-tag', 'school_tag');
+  add('as-min-score', 'min_score'); add('as-max-score', 'max_score');
+  add('as-max-tuition', 'max_tuition');
+  params.set('sort_by', currentSort.field);
+  params.set('sort_order', currentSort.order);
+  params.set('page', page); params.set('per_page', 30);
+
+  const container = document.getElementById('as-results');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><p>搜索中...</p></div>';
+
+  try {
+    const res = await fetch('/api/search?' + params.toString());
+    const data = await res.json();
+    renderSearchResults(container, data);
+  } catch (e) {
+    container.innerHTML = '<div class="empty"><div class="icon">❌</div><p>搜索失败</p></div>';
+  }
+}
+
+function renderSearchResults(container, data) {
+  if (data.total === 0) {
+    container.innerHTML = '<div class="empty"><div class="icon">📭</div><p>未找到匹配结果</p></div>';
+    return;
+  }
+
+  const statsHtml = `
+    <div class="stats">
+      <div class="stat"><div class="num">${data.total.toLocaleString()}</div><div class="lbl">总结果</div></div>
+      <div class="stat"><div class="num">${data.page}/${data.total_pages}</div><div class="lbl">页码</div></div>
+    </div>`;
+
+  // Desktop table
+  let rowsHtml = '<table><thead><tr>';
+  rowsHtml += `<th onclick="sortSearch('school_name')">院校 <span class="sort-icon">${currentSort.field==='school_name'?(currentSort.order==='asc'?'▲':'▼'):'⇅'}</span></th>`;
+  rowsHtml += `<th onclick="sortSearch('major_full_name')">专业 <span class="sort-icon">${currentSort.field==='major_full_name'?(currentSort.order==='asc'?'▲':'▼'):'⇅'}</span></th>`;
+  rowsHtml += '<th>省份</th><th>城市</th><th>批次</th><th>科类</th>';
+  rowsHtml += `<th onclick="sortSearch('avg_score_2025')">均分 <span class="sort-icon">${currentSort.field==='avg_score_2025'?(currentSort.order==='asc'?'▲':'▼'):'⇅'}</span></th>`;
+  rowsHtml += `<th onclick="sortSearch('avg_rank_2025')">均位次 <span class="sort-icon">${currentSort.field==='avg_rank_2025'?(currentSort.order==='asc'?'▲':'▼'):'⇅'}</span></th>`;
+  rowsHtml += '<th>标签</th><th>学费</th></tr></thead><tbody>';
+
+  data.results.forEach(r => {
+    rowsHtml += `<tr ${makeRowClickable(r.school_name)}>
+      <td><strong>${escHtml(r.school_name)}</strong></td><td>${escHtml(r.major_full_name||'')}</td>
+      <td>${escHtml(r.school_province||'')}</td><td>${escHtml(r.school_city||'')}</td>
+      <td>${escHtml(r.batch||'')}</td><td>${escHtml(r.subject_category||'')}</td>
+      <td>${r.avg_score_2025||'-'}</td><td><strong>${r.avg_rank_2025 ? r.avg_rank_2025.toLocaleString() : '-'}</strong></td>
+      <td>${(r.school_tag||'').split('/').slice(0,3).map(t => `<span class="tag">${t}</span>`).join('')}</td>
+      <td>${r.tuition ? r.tuition.toLocaleString() : '-'}</td>
+    </tr>`;
+  });
+  rowsHtml += '</tbody></table>';
+
+  // Mobile cards
+  let cardsHtml = '';
+  data.results.forEach(r => {
+    cardsHtml += `<div class="card-item" onclick="showSchoolDetail('${escAttr(r.school_name)}')">
+      <div class="ci-school">${escHtml(r.school_name)}</div>
+      <div class="ci-major">${escHtml(r.major_full_name||'')} · ${escHtml(r.batch||'')}</div>
+      <div class="ci-meta">
+        <span class="ci-rank">位次 <strong>${r.avg_rank_2025 ? r.avg_rank_2025.toLocaleString() : '-'}</strong></span>
+        <span>均分 ${r.avg_score_2025||'-'}</span>
+        <span>${escHtml(r.school_city||'')} ${escHtml(r.school_province||'')}</span>
+      </div>
+      <div class="ci-arrow">›</div>
+    </div>`;
+  });
+
+  container.innerHTML = renderResultSection(container, statsHtml, rowsHtml, cardsHtml, data.total);
+
+  // Pagination
+  let pagHtml = '<div class="pagination">';
+  pagHtml += `<button ${data.page<=1?'disabled':''} onclick="doAdvancedSearch(${data.page-1})">‹ 上一页</button>`;
+  pagHtml += `<span class="page-info">${data.page}/${data.total_pages} (${data.total}条)</span>`;
+  pagHtml += `<button ${data.page>=data.total_pages?'disabled':''} onclick="doAdvancedSearch(${data.page+1})">下一页 ›</button>`;
+  pagHtml += '</div>';
+  container.innerHTML += pagHtml;
+}
+
+function sortSearch(field) {
+  if (currentSort.field === field) currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+  else { currentSort.field = field; currentSort.order = 'asc'; }
+  doAdvancedSearch(1);
+}
+
+// ==================== MODAL ====================
+function closeModal() {
+  document.getElementById('school-modal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+document.getElementById('school-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ==================== MINI CHART POPUP ====================
+function showMajorHistoryChart(btn, majorName, r23r, r23s, r24r, r24s, r25r, r25s) {
+  const existing = document.querySelector('.mini-chart-popup');
+  if (existing) existing.remove();
+
+  const popup = document.createElement('div');
+  popup.className = 'mini-chart-popup';
+  popup.style.cssText = 'position:fixed;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.25);padding:14px;z-index:2000;width:94vw;max-width:420px;';
+  popup.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:13px;">${escHtml(majorName)}</strong>
+      <button onclick="this.closest('.mini-chart-popup').remove()" style="background:#f0f0f0;border:none;width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:160px;height:180px;"><canvas id="mini-rank-chart"></canvas></div>
+      <div style="flex:1;min-width:160px;height:180px;"><canvas id="mini-score-chart"></canvas></div>
+    </div>`;
+  document.body.appendChild(popup);
+
+  const rect = btn.getBoundingClientRect();
+  popup.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 428)) + 'px';
+  popup.style.top = Math.min(rect.bottom + 6, window.innerHeight - 250) + 'px';
+
+  setTimeout(() => {
+    drawHistoryChart('mini-rank-chart', '位次', '位次', [r23r, r24r, r25r], true);
+    drawHistoryChart('mini-score-chart', '分数', '分数', [r23s, r24s, r25s], false);
+  }, 50);
+
+  setTimeout(() => {
+    const closePopup = function(e) {
+      if (!popup.contains(e.target) && e.target !== btn) { popup.remove(); document.removeEventListener('click', closePopup); }
+    };
+    document.addEventListener('click', closePopup);
+  }, 100);
+}
+
+// ==================== BACK TO TOP ====================
+window.addEventListener('scroll', function() {
+  document.getElementById('back-top').classList.toggle('show', window.scrollY > 400);
+});
+
+// ==================== RESIZE HANDLER ====================
+window.addEventListener('resize', function() {
+  isMobile = window.innerWidth <= 768;
+});
+
+// ==================== UTILS ====================
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  if (!s) return '';
+  return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+function showToast(msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast'; toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => { toast.remove(); }, 3000);
+}
+
+init();
+</script>
+</body>
+</html>
