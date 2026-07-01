@@ -11,7 +11,11 @@
       "Bash(curl -s -o NUL -w \"%{http_code}\" http://localhost:5000/)",
       "Bash(curl -s http://localhost:5000/)",
       "Bash(curl -s -o NUL -w \"%{http_code}\" http://localhost:5000/api/filter-options)",
-      "Bash(git init *)"
+      "Bash(git init *)",
+      "Bash(git commit -m 'feat: 安徽高考数据查询系统 - 名次匹配/专业查询/院校详情/高级筛选 *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git commit *)"
     ]
   }
 }

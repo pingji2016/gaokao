@@ -454,7 +454,7 @@ function renderRankMatchResults(container, data) {
       <td>${r.tuition ? r.tuition.toLocaleString() : '-'}</td>
     </tr>`;
   });
-  if (data.total_majors > 200) rowsHtml += `<tr><td colspan="9" style="text-align:center;color:#888;padding:12px;">仅显示前200条</td></tr>`;
+  if (data.total_majors > 200) rowsHtml += `<tr><td colspan="9" style="text-align:center;color:#888;padding:12px;">仅显示前200条（共${data.total_majors}条）</td></tr>`;
   rowsHtml += '</tbody></table>';
 
   // Mobile card items
@@ -474,7 +474,7 @@ function renderRankMatchResults(container, data) {
       <div class="ci-arrow">›</div>
     </div>`;
   });
-  if (data.total_majors > 200) cardsHtml += '<div style="text-align:center;color:#888;padding:12px;font-size:12px;">仅显示前200条</div>';
+  if (data.total_majors > 200) cardsHtml += `<div style="text-align:center;color:#888;padding:12px;font-size:12px;">仅显示前200条（共${data.total_majors}条）</div>`;
 
   container.innerHTML = renderResultSection(container, statsHtml, rowsHtml, cardsHtml, data.total_majors);
 }
@@ -534,7 +534,7 @@ function renderMajorQueryResults(container, data) {
       <td>${r.tuition ? r.tuition.toLocaleString() : '-'}</td>
     </tr>`;
   });
-  if (data.total > 300) rowsHtml += `<tr><td colspan="11" style="text-align:center;color:#888;padding:12px;">仅显示前300条</td></tr>`;
+  if (data.total > 300) rowsHtml += `<tr><td colspan="11" style="text-align:center;color:#888;padding:12px;">仅显示前300条（共${data.total}条）</td></tr>`;
   rowsHtml += '</tbody></table>';
 
   let cardsHtml = '';
@@ -551,7 +551,7 @@ function renderMajorQueryResults(container, data) {
       <div class="ci-arrow">›</div>
     </div>`;
   });
-  if (data.total > 300) cardsHtml += '<div style="text-align:center;color:#888;padding:12px;font-size:12px;">仅显示前300条</div>';
+  if (data.total > 300) cardsHtml += `<div style="text-align:center;color:#888;padding:12px;font-size:12px;">仅显示前300条（共${data.total}条）</div>`;
 
   container.innerHTML = renderResultSection(container, statsHtml, rowsHtml, cardsHtml, data.total);
 }

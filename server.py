@@ -298,7 +298,7 @@ def rank_match():
     where = 'WHERE ' + ' AND '.join(conditions)
 
     rows = db.execute(
-        f'SELECT * FROM gaokao {where} ORDER BY CAST(avg_rank_2025 AS REAL) ASC',
+        f'SELECT * FROM gaokao {where} ORDER BY CAST(avg_rank_2025 AS REAL) ASC LIMIT 500',
         params
     ).fetchall()
 
@@ -370,7 +370,7 @@ def major_history():
     where = 'WHERE ' + ' AND '.join(conditions)
 
     rows = db.execute(
-        f'SELECT * FROM gaokao {where} ORDER BY CAST(avg_rank_2025 AS REAL) ASC',
+        f'SELECT * FROM gaokao {where} ORDER BY CAST(avg_rank_2025 AS REAL) ASC LIMIT 500',
         params
     ).fetchall()
 
